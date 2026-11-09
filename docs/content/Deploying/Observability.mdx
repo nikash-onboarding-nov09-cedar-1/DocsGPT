@@ -1,7 +1,7 @@
 ---
 title: Observability
 description: Send traces, metrics, and logs from DocsGPT to any OpenTelemetry-compatible backend (Axiom, Honeycomb, Grafana, Datadog, Jaeger, etc.).
-lastUpdated: 2026-11-02
+lastUpdated: 2026-11-09
 ---
 
 import { Callout } from 'nextra/components'
@@ -29,6 +29,58 @@ Auto-instrumentation covers Flask, Starlette, Celery, SQLAlchemy,
 psycopg, Redis, requests, and Python logging. Agent runs, LLM calls,
 tool calls and retrieval are recorded by DocsGPT itself and exported as
 OpenTelemetry GenAI spans — see [Execution traces](#execution-traces).
+
+## Convergent chat tracing
+
+Convergent recording is optional and does not require the
+`opentelemetry-instrument` launcher. It covers `ClassicAgent.gen`, used by
+classic chats (including the legacy `react` alias), the OpenAI Chat Completions
+requests it makes, and tools executed in that chat turn. DocsGPT's existing
+Postgres execution traces and configured OTel exporters remain in place.
+
+1. Create an ingestion API key in your
+   [Convergent workspace settings](https://app.convergent.dev/workspace/settings).
+2. Set `CONVERGENT_API_KEY` in the **process environment** of the backend and
+   any workers running chats, then restart those processes. Merely adding it
+   to DocsGPT's `.env` file does not export it; use your deployment's secret
+   injection or an environment-file launcher such as `dotenv run --`.
+
+```bash
+export CONVERGENT_API_KEY="<ingestion key>"
+```
+
+Tracing starts lazily on the first classic chat turn. The release defaults to
+DocsGPT's version (`docsgpt/version.py`); set `CONVERGENT_RELEASE` to a build ID
+or commit SHA when you need deployment-level grouping. A conversation ID, when
+available on the tool executor, becomes the Convergent session ID.
+
+For a local recording without an ingestion key, set `CONVERGENT_SPANS_DIR` in
+the process environment. Spans are written as `spans.jsonl` there. With neither
+a key nor a local/console destination configured, no Convergent initialization
+or OpenAI instrumentation is performed.
+
+**Content and privacy:** when recording is enabled, prompts, answers, offered
+tool schemas, tool arguments/results, and the final answer with sources and
+tool-call records are captured. Existing OTel exporters can receive this content
+too. No additional redaction is applied. Review your data policy before enabling
+recording. The default OTel settings are
+`OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental` and
+`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=span_only`; explicit values
+are not overwritten. Set the content variable to `no_content` to omit content
+from both the hand-written spans and model spans. Structural spans still export.
+If you also use OTel auto-instrumentation, set these variables **before process
+startup**, so the GenAI instrumentation uses span content instead of legacy log
+events. Event-only content is not ingested by Convergent.
+
+The OpenAI integration and its GenAI helper are pinned together because newer
+helper versions remove APIs used by the integration. The representative check
+exercises a streamed tool call and follow-up answer through the real agent,
+OpenAI SDK, parser, discovery, dispatcher, and price tool, with external model,
+HTTP, database and Redis I/O replaced by local fixtures. It does not establish
+live provider billing or hosted Convergent delivery. Other agent types,
+non-OpenAI providers, the Responses API, approval continuations, and file upload
+or artifact paths are not verified by this check. File bytes are not attached
+to Convergent by this integration.
 
 ## Enabling
 

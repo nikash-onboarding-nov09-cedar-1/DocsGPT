@@ -122,6 +122,9 @@ dependencies = [
   "uvicorn-worker>=0.4,<1",
   "websocket-client>=1.9.0,<2",
   "werkzeug>=3.1.9,<4",
+  "convergent-sdk==0.0.12",
+  "opentelemetry-instrumentation-openai-v2==2.4b0",
+  "opentelemetry-util-genai==0.4b0",
 ]
 
 [project.optional-dependencies]

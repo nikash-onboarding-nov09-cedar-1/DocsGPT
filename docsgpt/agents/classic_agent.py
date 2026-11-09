@@ -6,6 +6,7 @@ from docsgpt.agents.tools.graph_search import add_graph_search_tool
 from docsgpt.agents.tools.internal_search import add_internal_search_tool
 from docsgpt.agents.tools.wiki import add_wiki_tool
 from docsgpt.logging import LogContext
+from docsgpt.tracing.convergent import trace_chat
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,11 @@ class ClassicAgent(BaseAgent):
         super().__init__(*args, **kwargs)
         self.retriever_config = retriever_config or {}
         self.wiki_config = wiki_config or {}
+
+    @trace_chat
+    def gen(self, query: str, log_context: Optional[LogContext] = None) -> Generator[Dict, None, None]:
+        """Stream one chat turn with Convergent ancestry around the complete loop."""
+        yield from super().gen(query=query, log_context=log_context)
 
     def _gen_inner(
         self, query: str, log_context: LogContext

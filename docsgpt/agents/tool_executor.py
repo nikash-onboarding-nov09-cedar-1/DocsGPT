@@ -17,6 +17,7 @@ from docsgpt.agents.default_tools import (
     synthesized_default_tools,
 )
 from docsgpt import tracing
+from docsgpt.tracing.convergent import trace_tool
 from docsgpt.agents import mcp_apps
 from docsgpt.agents.tool_pins import (
     PARAM_SECTIONS,
@@ -1771,6 +1772,7 @@ class ToolExecutor:
     # :meth:`_available_tool_names`.
     MAX_ADVERTISED_TOOL_NAMES = 30
 
+    @trace_tool
     def execute(self, tools_dict: Dict, call, llm_class_name: str):
         """Execute a tool call. Yields status events, returns (result, call_id).
 
